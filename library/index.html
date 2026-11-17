@@ -987,20 +987,21 @@ function startRA(c){
 function raStopAudio(){ try{ RA.audio && RA.audio.pause(); }catch(e){} RA.stop=null; }
 function raListen(){ const v=RA.list[RA.v], seg=RA.b.au&&RA.b.au[v.k]; if(!seg) return; try{ RA.audio.currentTime=seg[0]; }catch(e){} RA.stop=seg[1]; const p=RA.audio.play(); if(p&&p.catch) p.catch(()=>{}); }
 function raAlign(){
-  const a=RA.words.map(x=>x.w), s=normW(RA.T+' '+RA.P).map(w=>NUM[w]||w), n=a.length, m=s.length;
+  /* 지금 쪽과 다음 쪽까지만 맞춰 본다 (같은 단어가 뒤쪽에 또 나와도 책장이 멀리 건너뛰지 않게) */
+  const lim=Math.min(RA.list.length-1, RA.v+1);
+  let n=0; while(n<RA.words.length && RA.words[n].vi<=lim) n++;
+  const a=RA.words.slice(0,n).map(x=>x.w), s=normW(RA.T+' '+RA.P).map(w=>NUM[w]||w), m=s.length;
   const D=Array.from({length:n+1},()=>new Uint16Array(m+1));
   for(let i=n-1;i>=0;i--) for(let j=m-1;j>=0;j--) D[i][j]= a[i]===s[j]? D[i+1][j+1]+1 : Math.max(D[i+1][j],D[i][j+1]);
-  const hit=new Array(n).fill(false); let i=0,j=0; while(i<n&&j<m){ if(a[i]===s[j]){ hit[i]=true; i++; j++; } else if(D[i+1][j]>=D[i][j+1]) i++; else j++; }
+  const hit=new Array(RA.words.length).fill(false); let i=0,j=0; while(i<n&&j<m){ if(a[i]===s[j]){ hit[i]=true; i++; j++; } else if(D[i+1][j]>=D[i][j+1]) i++; else j++; }
   RA.hit=hit; RA.extra=Math.max(0,m-D[0][0]);
-  /* 읽는 곳을 따라 책장 넘기기 */
-  let last=-1; hit.forEach((h,k)=>{ if(h) last=k; });
-  if(last>=0 && RA.words[last].vi===RA.v && RA.v+1<RA.list.length){
-    /* 이 쪽 마지막 단어 근처까지 읽었으면 다음 쪽으로 */
-    const ks=RA.words.map((x,k)=>[x,k]).filter(([x])=>x.vi===RA.v).map(([,k])=>k), got=ks.filter(k=>hit[k]).length;
-    if(last>=ks[ks.length-1]-1 && got>=ks.length*0.6){ RA.v++; return true; } }
-  if(last>=0){ const lv=RA.words[last].vi;
-    if(lv>RA.v){ const cur=RA.words.map((x,k)=>[x,k]).filter(([x])=>x.vi===RA.v), got=cur.filter(([,k])=>hit[k]).length;
-      if(lv>=RA.v+2 || got>=cur.length*0.5) { RA.v=lv; return true; } } }
+  /* 책장은 한 번에 한 쪽씩만 넘긴다 */
+  if(RA.v+1>=RA.list.length) return false;
+  const idx=vi=>RA.words.map((x,k)=>[x,k]).filter(([x])=>x.vi===vi).map(([,k])=>k);
+  const cur=idx(RA.v), nxt=idx(RA.v+1), gc=cur.filter(k=>hit[k]).length, gn=nxt.filter(k=>hit[k]).length;
+  const endRead = cur.length && (hit[cur[cur.length-1]] || hit[cur[cur.length-2]]) && gc>=cur.length*0.6;
+  const nextStarted = nxt.length && gn>=Math.max(2, nxt.length*0.4) && (hit[nxt[0]]||hit[nxt[1]]);
+  if(endRead || nextStarted){ RA.v++; return true; }
   return false;
 }
 function raMarked(vi){ const v=RA.list[vi]; let k=RA.words.findIndex(x=>x.vi===vi); const live=RA.started;
