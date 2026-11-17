@@ -460,9 +460,9 @@ button,a,.fc,.tile{touch-action:manipulation;-webkit-tap-highlight-color:transpa
 
 .smonly{display:none} body.sm .smonly{display:inline}
 .tbs{display:none} body.sm .tbm{display:none} body.sm .tbs{display:inline}
-.smbanner{display:none;background:#FFF3C4;color:#5A4500;text-align:center;font-size:14px;padding:9px 16px}
+.smbanner{display:none;background:#FFF3C4;color:#5A4500;text-align:center;font-size:14px;padding:7px 16px}
 body.sm .smbanner{display:block}
-body.sm .kidchip, body.sm #repBtn{display:none!important}
+body.sm .kidchip, body.sm #repBtn, body.sm #tmode, body.sm .tbanner{display:none!important}
 
 .smbanner .slogan{display:block;font-family:'Fredoka',ui-rounded,'Noto Sans KR',system-ui,sans-serif;font-weight:600;font-size:17px;color:#1F3A5F;margin-bottom:3px}
 .smbanner .slogan em{font-style:normal;font-family:'Noto Sans KR',system-ui,sans-serif;font-weight:500;font-size:14px;color:#5A4500;margin-left:6px}
@@ -482,7 +482,7 @@ body.sm .kidchip, body.sm #repBtn{display:none!important}
   <button class="tmode" id="tmode" aria-pressed="false">선생님 모드</button>
  </div>
 </div></header>
-<div class="smbanner"><span class="slogan">My Step. The Real Step. True Growth ✨ <em>내 속도로, 한 걸음씩, 진짜 성장.</em></span>📚 <b>샘플 도서관</b> · 레벨마다 5권씩 맛보기로 열어 두었어요. 책 읽기 · 단어 공부 · 카드 게임 · 퀴즈 · 낭독을 모두 해 볼 수 있어요.</div>
+<div class="smbanner"><span class="slogan">My Step. The Real Step. True Growth ✨</span>📚 선생님용 샘플 도서관 · 레벨별 5권</div>
 <div class="tbanner"><span class="tbm">선생님 모드 · 워크북·정답지·드라이브 폴더 버튼이 보입니다.</span><span class="tbs">선생님 모드 · 책 창에서 워크북(학생용)과 정답지를 열 수 있어요.</span> 학생에게 화면을 보여줄 땐 꺼 주세요.</div>
 <nav class="shelfbar"><div class="wrap" role="tablist" id="tabs"></div></nav>
 <main class="wrap" id="main"></main>
@@ -558,7 +558,7 @@ const heartSvg = '<svg viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-9.3-9.2C1.
 function load(k, def){ try{ const v=JSON.parse(localStorage.getItem(k)); return v==null?def:v }catch(e){ return def } }
 function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)) }catch(e){} }
 
-let teacher = load('mm_teacher2', false);
+let teacher = SM ? true : load('mm_teacher2', false);   /* 샘플은 선생님 버전만 */
 const byC = c => BOOKS.find(b=>b.c===c);
 
 /* ---------- shelf ---------- */
