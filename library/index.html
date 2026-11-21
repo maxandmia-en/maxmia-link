@@ -8,7 +8,7 @@
 <meta property="og:site_name" content="MYSTEP 마이스텝">
 <meta property="og:title" content="Max &amp; Mia 샘플 도서관">
 <meta property="og:description" content="넘기는 그림책 · 원어민 낭독 · 단어 게임 · 퀴즈 — 레벨별 5권 맛보기">
-<meta property="og:image" content="https://maxandmia-en.github.io/maxmia-link/og-library-mystep.png">
+<meta property="og:image" content="https://maxandmia-en.github.io/maxmia-link/og-library-mystep-v2.png">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta property="og:url" content="https://maxandmia-en.github.io/maxmia-link/library/">
 <meta name="twitter:card" content="summary_large_image">
@@ -64,6 +64,14 @@ h1 small{display:block;font-family:'Noto Sans KR',system-ui,-apple-system,sans-s
 .cv{position:relative;border-radius:6px 12px 12px 6px;overflow:hidden;aspect-ratio:360/511;background:#eee;box-shadow:0 8px 18px -10px rgba(31,58,95,.45);transition:transform .18s ease, box-shadow .18s ease}
 .cv::before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:linear-gradient(90deg,rgba(0,0,0,.18),rgba(255,255,255,.12) 60%,transparent);z-index:1}
 .cv img{width:100%;height:100%;object-fit:cover;display:block}
+.cv{box-shadow:0 0 0 3px var(--lc),0 8px 18px -10px rgba(31,58,95,.45)}
+.card .cv{border-radius:6px 12px 0 0}
+.lvband{display:block;margin-top:-8px;border-radius:0 0 12px 6px;box-shadow:0 0 0 3px var(--lc);background:var(--lc);color:#fff;font:700 15px/1 'Fredoka',ui-rounded,'Noto Sans KR',sans-serif;letter-spacing:.02em;padding:7px 10px 8px;text-align:center}
+.lvband small{font-weight:600;font-size:12px;opacity:.9}
+.card[data-g="L1"] .lvband{color:#1F2A55}
+.card .meta .code{color:var(--lc)}
+.card[data-g="L1"] .meta .code{color:#B08F00}
+@media (max-width:640px){.lvband{font-size:13px;padding:5px 6px 6px}.lvband small{font-size:10px}}
 .card .open:hover .cv,.card .open:focus-visible .cv{transform:translateY(-4px) rotate(-.6deg)}
 .card .open:focus-visible{outline:none}.card .open:focus-visible .cv{outline:3px solid var(--L3);outline-offset:3px}
 .stamp{position:absolute;right:6px;top:6px;z-index:2;width:32px;height:32px;border-radius:50%;background:var(--star);display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.25);transform:rotate(-12deg)}
@@ -578,10 +586,12 @@ function card(b){
   const lbl = b.c.startsWith('Phonics') ? 'Phonics '+b.c.slice(-1) : b.c;
   const qn = (b.qz? b.qz.v.length+b.qz.s.length+(isEng(b)?b.qz.k.length:0) : 0);
   const bs = ST().best[b.c];
-  return `<div class="card">
+  const lvTxt = b.g==='SP'?'번외편':b.g==='P'?'Phonics':(GNAME[b.g]||'');
+  const lvNo = /^L\d-\d+$/.test(b.c)? ' · Book '+b.c.slice(3) : '';
+  return `<div class="card" data-g="${b.g}" style="--lc:${COLOR[b.g]||'#8a94a6'}">
    <button class="heart" data-fav="${b.c}" aria-pressed="${!!ST().fav[b.c]}" aria-label="${esc(b.t)} 좋아요">${heartSvg}</button>
    <button class="open" data-c="${b.c}" aria-label="${esc(b.t)} 열기">
-    <div class="cv"><img loading="lazy" src="cov/${b.c}.jpg" alt="">${ST().read[b.c]?'<span class="stamp">'+star+'</span>':''}</div>
+    <div class="cv"><img loading="lazy" src="cov/${b.c}.jpg" alt="">${ST().read[b.c]?'<span class="stamp">'+star+'</span>':''}</div><span class="lvband">${lvTxt}<small>${lvNo}</small></span>
     <div class="meta"><span class="code">${lbl}</span><span class="ic">${b.n?'<span>🔊 넘기는 책</span>':''}${qn?`<span class="qs">${bs!=null?'★'+bs+'/'+qn:'퀴즈 '+qn}</span>`:''}</span></div>
     <p class="ttl">${esc(b.t)}</p></button></div>`;
 }
