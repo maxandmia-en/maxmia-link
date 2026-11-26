@@ -398,6 +398,16 @@ body.teacher .addkid{display:flex}
 .qmain.ra .raart .pgf:only-child{width:min(70%,calc((100vh - 235px)*540/767))}
 .raart.flip{animation:raflip .45s ease}
 @keyframes raflip{from{opacity:.25;transform:translateX(24px)}to{opacity:1;transform:none}}
+.rachoose{display:flex;flex-direction:column;gap:22px;align-items:center;padding-top:10px}
+.rcopt{display:grid;grid-template-columns:1fr 1fr;gap:18px;width:100%}
+.rco{border:3px solid #E3D5B8;background:#fff;border-radius:24px;padding:26px 18px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;box-shadow:0 6px 0 #E3D5B8;color:var(--ink)}
+.rco:hover{border-color:var(--navy)}
+.rco.last{border-color:var(--navy)}
+.rco .ic{font-size:46px}
+.rco b{font-size:24px}
+.rco small{font-size:15px;color:#8A7F6C;text-align:center}
+.rabar .rb.big{background:var(--star);font-size:24px;padding:10px 22px}
+@media (max-width:560px){ .rcopt{grid-template-columns:1fr} }
 .rabar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;background:#fff;border-radius:22px;padding:10px 16px;box-shadow:0 6px 0 #E3D5B8;max-width:1100px;width:100%;margin:0 auto}
 .rabar .mic{width:78px;height:78px;margin:0;box-shadow:0 6px 0 #B23236}
 .rabar .mic svg{width:34px}
@@ -1124,7 +1134,17 @@ function startRA(c){
   $('#qzTitle').textContent=b.t+' · 낭독하기';
   $('#qzKid').textContent = KID? KID.name : L('손님','Guest');
   $('#quiz').classList.add('on'); document.body.style.overflow='hidden';
-  drawRA();
+  raChoose();
+}
+function raChoose(){
+  const last=load('mm_ra_mode','auto');
+  $('#qzTrail').style.display='flex';
+  $('#qzTrail').innerHTML=`<div class="lsteps"><span class="on">🎤 ${L('낭독하기','Read aloud')}</span></div>`;
+  const m=$('#qzMain'); m.classList.remove('ra','game'); m.classList.add('solo');
+  m.innerHTML=`<div class="rachoose"><div class="guide2"><img src="maxface.png" alt=""><div class="bub">${L('책장을 어떻게 넘길까요?','How do you want to turn the pages?')}</div></div>
+    <div class="rcopt"><button class="rco${last==='auto'?' last':''}" data-m="auto"><span class="ic">✨</span><b>${L('저절로 넘기기','Turn by itself')}</b><small>${L('한 쪽을 다 읽으면 책장이 알아서 넘어가요','The page turns when you finish reading it')}</small></button>
+    <button class="rco${last==='hand'?' last':''}" data-m="hand"><span class="ic">👆</span><b>${L('내가 넘기기','I turn the pages')}</b><small>${L('다 읽으면 › 버튼을 눌러 넘겨요','Tap › when you finish a page')}</small></button></div></div>`;
+  document.querySelectorAll('.rco').forEach(bt=>bt.onclick=()=>{ RA.manual=bt.dataset.m==='hand'; save('mm_ra_mode',bt.dataset.m); drawRA(); });
 }
 function raStopAudio(){ try{ RA.audio && RA.audio.pause(); }catch(e){} RA.stop=null; }
 function raListen(){ const v=RA.list[RA.v], seg=RA.b.au&&RA.b.au[v.k]; if(!seg) return; try{ RA.audio.currentTime=seg[0]; }catch(e){} RA.stop=seg[1]; const p=RA.audio.play(); if(p&&p.catch) p.catch(()=>{}); }
@@ -1138,7 +1158,7 @@ function raAlign(full){
   const hit=new Array(RA.words.length).fill(false); let i=0,j=0; while(i<n&&j<m){ if(weq(a[i],s[j]) && D[i][j]===D[i+1][j+1]+1){ hit[i]=true; i++; j++; } else if(D[i+1][j]>=D[i][j+1]) i++; else j++; }
   RA.hit=hit; RA.extra=Math.max(0,m-D[0][0]);
   /* 책장은 한 번에 한 쪽씩만 넘긴다 */
-  if(full || RA.v+1>=RA.list.length) return false;
+  if(full || RA.manual || RA.v+1>=RA.list.length) return false;
   const idx=vi=>RA.words.map((x,k)=>[x,k]).filter(([x])=>x.vi===vi).map(([,k])=>k);
   const cur=idx(RA.v), nxt=idx(RA.v+1), gc=cur.filter(k=>hit[k]).length, gn=nxt.filter(k=>hit[k]).length;
   const endRead = cur.length && (hit[cur[cur.length-1]] || hit[cur[cur.length-2]]) && gc>=cur.length*0.6;
@@ -1155,8 +1175,8 @@ function drawRA(flip){
   $('#qzTrail').innerHTML=`<div class="lsteps"><span class="on">🎤 ${L('낭독하기','Read aloud')} · ${L('책을 보고 소리 내어 읽어요','Read the book out loud')}</span></div>`;
   const m=$('#qzMain'); m.classList.remove('solo','game'); m.classList.add('ra');
   const st = !DICT? L('이 기기에서는 마이크를 쓸 수 없어요. 원어민 소리를 듣고 따라 읽어요.','The mic is not available here. Listen and read along.')
-    : RA.live? (micOn? L('듣고 있어요… 책장은 저절로 넘어가요','Listening… pages turn by themselves') : L('마이크를 눌러 이어 읽어요','Tap the mic to keep reading'))
-    : L('마이크를 한 번 누르고 책을 끝까지 쭉 읽어요','Tap the mic once and read the whole book');
+    : RA.live? (micOn? (RA.manual? L('듣고 있어요… 한 쪽을 다 읽으면 › 를 눌러요','Listening… tap › when you finish the page') : L('듣고 있어요… 책장은 저절로 넘어가요','Listening… pages turn by themselves')) : L('마이크를 눌러 이어 읽어요','Tap the mic to keep reading'))
+    : (RA.manual? L('마이크를 누르고 읽어요. 한 쪽을 다 읽으면 › 를 눌러 넘겨요','Tap the mic and read. Tap › to turn the page') : L('마이크를 한 번 누르고 책을 끝까지 쭉 읽어요','Tap the mic once and read the whole book'));
   m.innerHTML=`<div class="raart${flip?' flip':''}">${v.pg.map(p=>`<div class="pgf" style="${pageBg(b.c,p)}"></div>`).join('')}</div>
    <div class="rabar">
     <img src="maxface.png" alt="">
@@ -1164,7 +1184,7 @@ function drawRA(flip){
     ${DICT?`<button class="mic ${RA.live&&micOn?'live':''}" id="ramic" aria-label="${L('마이크','Mic')}">${MIC}</button>`:''}
     <div class="st"><b id="micst">${st}</b><div class="pbar2"><em id="rapg" style="width:${RA.started?raPageScore(RA.v):0}%"></em></div><small>${L('쪽','Page')} ${RA.v+1} / ${RA.list.length} · ${L('초록 막대 = 이 쪽에서 맞게 읽은 만큼','Green = words read right on this page')}</small></div>
     <button class="rb lis" id="ralis">🔊 ${L('이 쪽 듣기','Listen')}</button>
-    <button class="rb" id="ranx" aria-label="${L('다음 쪽','Next')}" ${RA.v+1<RA.list.length?'':'disabled'}>›</button>
+    <button class="rb${RA.manual?' big':''}" id="ranx" aria-label="${L('다음 쪽','Next')}" ${RA.v+1<RA.list.length?'':'disabled'}>›</button>
     <button class="rb done" id="radone" ${RA.started||teacher?'':'disabled'}>${L('다 읽었어요 ✓','I’m done ✓')}</button>
    </div>`;
   if(DICT){ ensureDict(); $('#ramic').onclick=raMic; }
@@ -1185,8 +1205,9 @@ function raUpdate(){ const turned=raAlign(); if(turned) return drawRA(true);
   const d=$('#radone'); if(d) d.disabled=false; }
 function raFinal(text){ text=(text||'').trim(); RA.P=''; if(text && !RA.T.toLowerCase().endsWith(text.toLowerCase())) RA.T=(RA.T+' '+text).trim(); raUpdate(); }
 function raPartial(text){ RA.P=(text||'').trim(); raUpdate(); }
-function raState(){ if(!micOn && RA.live && !RA.finishing && !RA.userStop && DICT && $('#quiz').classList.contains('on')){ clearTimeout(RA.rt); RA.rt=setTimeout(()=>{ if(RA.live && !micOn && !RA.finishing && !RA.userStop) DICT.start().catch(()=>{}); },400); }
-  const m=$('#ramic'); if(m) m.classList.toggle('live',micOn); const st=$('#micst'); if(st) st.textContent= micOn? L('듣고 있어요… 책장은 저절로 넘어가요','Listening… pages turn by themselves') : L('마이크를 눌러 이어 읽어요','Tap the mic to keep reading'); }
+function raState(){ const lt=micOn? (RA.manual? L('듣고 있어요… 한 쪽을 다 읽으면 › 를 눌러요','Listening… tap › when you finish the page') : L('듣고 있어요… 책장은 저절로 넘어가요','Listening… pages turn by themselves')) : L('마이크를 눌러 이어 읽어요','Tap the mic to keep reading');
+  if(!micOn && RA.live && !RA.finishing && !RA.userStop && DICT && $('#quiz').classList.contains('on')){ clearTimeout(RA.rt); RA.rt=setTimeout(()=>{ if(RA.live && !micOn && !RA.finishing && !RA.userStop) DICT.start().catch(()=>{}); },400); }
+  const m=$('#ramic'); if(m) m.classList.toggle('live',micOn); const st=$('#micst'); if(st) st.textContent=lt; }
 async function raFinish(){
   RA.finishing=true;
   if(micOn && DICT){ try{ await DICT.stop(); }catch(e){} await new Promise(r=>setTimeout(r,700)); }
