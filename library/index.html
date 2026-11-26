@@ -1771,7 +1771,11 @@ async function pnImage(){
     const q=r.qz; const qp=q?Math.round(100*(q.v[0]+q.s[0]+(q.k?q.k[0]:0))/(q.v[1]+q.s[1]+(q.k?q.k[1]:0))):null;
     c.fillStyle='#6B7591'; c.font=`700 12px ${F}`; c.fillText([r.ra?'낭독 '+r.ra.score+'점':'', qp!=null?'퀴즈 '+qp+'%':''].filter(Boolean).join(' · ')||'읽는 중',P+44,y+45);
     if(r.read){ c.fillStyle='#318A6F'; c.font=`900 18px ${F}`; c.fillText('✓',W-P-14,y+34); } y+=58; });
-  const a=document.createElement('a'); a.download=`독서리포트_${I.kid.name}_${$('#rDate').value||today()}.png`; a.href=cv.toDataURL('image/png'); document.body.appendChild(a); a.click(); a.remove();
+  const fn=`독서리포트_${I.kid.name}_${$('#rDate').value||today()}.png`;
+  const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
+  let dl=null; try{ if(window.claude&&claude.use) dl=await claude.use('downloads'); }catch(e){}
+  if(dl){ try{ await dl.save({filename:fn,data:blob}); $('#pnSaved').textContent='이미지를 저장했어요'; }catch(e){ $('#pnSaved').textContent= e&&e.code==='declined'?'저장을 취소했어요':'이 화면에서는 저장할 수 없어요. 화면을 캡처해 주세요.'; } return; }
+  const a=document.createElement('a'); a.download=fn; a.href=URL.createObjectURL(blob); document.body.appendChild(a); a.click(); a.remove();
 }
 
 /* ---------- quiz shelf on main ---------- */
