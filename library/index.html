@@ -622,7 +622,6 @@ body.sm .kidchip, body.sm #repBtn, body.sm #tmode, body.sm .tbanner{display:none
   <span class="tt" id="lnTitle"></span>
   <nav class="ln-steps" id="lnSteps"></nav>
   <span class="ln-clock" id="lnClock">0:00</span>
-  <div class="ln-team" id="lnTeam"></div>
   <button class="ln-x" id="lnX" aria-label="수업 닫기">×</button>
  </div>
  <div class="ln-main" id="lnMain"></div>
@@ -1579,12 +1578,8 @@ function lnClock(){
   el.textContent=`이 단계 ${lnFmt(stp)} / ${st.min}분 · 수업 ${lnFmt(tot)}`;
   el.classList.toggle('over', stp>st.min*60);
 }
-function lnTeam(){
-  const nm=['해님 팀','달님 팀'];
-  $('#lnTeam').innerHTML=nm.map((n,i)=>`<span class="${LN.turn===i?'turn':''}">${n}<b>${LN.score[i]}</b><button data-tp="${i}" aria-label="${n} 1점">+</button></span>`).join('');
-  document.querySelectorAll('[data-tp]').forEach(bt=>bt.onclick=()=>{ LN.score[+bt.dataset.tp]++; sfx.ok(); lnTeam(); });
-}
-function lnPoint(){ LN.score[LN.turn]++; LN.turn=1-LN.turn; lnTeam(); }
+function lnTeam(){}
+function lnPoint(){}
 function lnGo(s){ LN.s=s; LN.i=0; LN.st0=Date.now(); lnDraw(); }
 function lnDraw(){
   $('#lnSteps').innerHTML=LSTEPS.map((x,i)=>`<button class="${i===LN.s?'on':i<LN.s?'done':''}" data-ls="${i}">${x.ko}${x.min?`<b>${x.min}분</b>`:''}</button>`).join('');
@@ -1608,7 +1603,7 @@ function lnIntro(){
   $('#lnMain').innerHTML=`<div class="ln-row"><div class="ln-pic"><img src="cov/${b.c}.jpg" alt="${lnEsc(b.t)} 표지"></div>
    <div class="ln-side">${chip(b.g)}<div class="ln-q">${lnEsc(b.t)}</div>
     <div class="ln-flow">${LSTEPS.slice(1).map((x,i)=>`<div class="${x.k==='self'?'self':''}"><b>${x.min}분</b><span>${i+1}. ${x.ko}</span><small>${x.k==='self'?'아이들이 스스로':'선생님과 함께'}</small></div>`).join('')}</div>
-    <p style="margin:0;font-size:17px;color:#3D4A73">선생님과 함께 24분 + 혼자 워크북 10분. 맞히면 차례인 팀에 1점, 위쪽 + 버튼으로도 점수를 줄 수 있어요.</p>
+    <p style="margin:0;font-size:17px;color:#3D4A73">선생님과 함께 24분 + 혼자 워크북 10분. 위쪽 단계 탭을 눌러 언제든 이동할 수 있어요.</p>
     <div><button class="ln-btn main" id="lnStart">수업 시작 →</button></div></div></div>`;
   $('#lnStart').onclick=()=>{ LN.t0=Date.now(); lnGo(1); };
 }
@@ -1646,14 +1641,14 @@ function lnWQ(){
   const Q=LN.wq; if(!Q.length){ return lnGo(LN.s+1); }
   const x=Q[LN.i], it=x.it, mean=it[4]||it[2]||'';
   const pic = it[1]>=0? lnPic(it) : `<div class="mt">${lnEsc(mean)}</div>`;
-  $('#lnMain').innerHTML=lnHead('알맞은 단어를 골라요', `${['해님 팀','달님 팀'][LN.turn]} 차례예요. 맞히면 1점!`)+
+  $('#lnMain').innerHTML=lnHead('알맞은 단어를 골라요', LN.eng?'Look and choose the word.':'보고 알맞은 단어를 골라요.')+
    `<div class="ln-row"><div class="ln-pic">${pic}</div><div class="ln-side">
     <div class="ln-q">${it[1]>=0?(LN.eng?'What is it?':'이건 영어로 뭘까요?'):(LN.eng?'Which word has this meaning?':'이 뜻의 단어는?')}</div>
     <div class="ln-opts">${x.opts.map((o,j)=>`<button class="ln-opt" data-o="${j}">${lnEsc(o)}</button>`).join('')}</div>
     ${lnNav(LN.i,Q.length,'책 읽으러 가기 →')}</div></div>`;
   document.querySelectorAll('[data-o]').forEach(bt=>bt.onclick=()=>{ const o=x.opts[+bt.dataset.o];
     if(o===it[0]){ bt.classList.add('ok'); sfx.ok(); say(o); if(!x.done){ x.done=true; lnPoint(); } document.querySelectorAll('[data-o]').forEach(z=>z.disabled=true); }
-    else { bt.classList.add('no'); bt.disabled=true; sfx.no(); if(!x.done){ x.done=true; LN.turn=1-LN.turn; lnTeam(); } } });
+    else { bt.classList.add('no'); bt.disabled=true; sfx.no(); x.done=true; } });
   lnWireNav(Q.length, lnWQ);
 }
 function lnRead(){
@@ -1680,7 +1675,7 @@ function lnWB(){
   else if(t==='o') body=`<div class="ln-opts" style="grid-template-columns:1fr">${x.ord.map((o,j)=>`<button class="ln-opt" data-or="${j}" style="text-align:left">${x.pick&&x.pick.includes(j)?`<span class="n">${x.pick.indexOf(j)+1}</span>`:''}${lnEsc(o.o)}</button>`).join('')}</div>`;
   else if(t==='k') body=`<div class="ln-card" style="font-size:20px">${LN.eng?'Answer in a sentence. Say it first, then write it.':'문장으로 말한 뒤 써요.'}</div>`;
   const exp = t==='k'? `Model answer: ${q[2]}` : (q[4]||'');
-  $('#lnMain').innerHTML=lnHead('워크북 같이 하기', `${['해님 팀','달님 팀'][LN.turn]} 차례 · 워크북 순서: Yes or No → Fill It In → Reading Quiz → Story Order${LN.eng?' → Answer in Sentences':''}`)+
+  $('#lnMain').innerHTML=lnHead('워크북 같이 하기', `워크북 순서: Yes or No → Fill It In → Reading Quiz → Story Order${LN.eng?' → Answer in Sentences':''}`)+
    `<div class="ln-row"><div class="ln-pic"><div class="pgv" style="width:100%;aspect-ratio:635/900;max-height:56vh;border-radius:10px;${pageBg(LN.b.c,picPage(pg||3))}"></div></div><div class="ln-side">
     <span class="ln-tag">${WBSEC[t]} · p.${pg}</span>
     <div class="ln-q"><button class="ln-spk" id="lnQs" aria-label="문제 듣기" style="display:inline-grid;vertical-align:middle;margin-right:10px">${SPK}</button>${qHTML}${ko?`<span class="ko">${lnEsc(ko)}</span>`:''}</div>
@@ -1690,11 +1685,11 @@ function lnWB(){
     ${lnNav(LN.i,A.length,'혼자 워크북 하기 →')}</div></div>`;
   $('#lnQs').onclick=()=>say(qtxt.replace('___','blank'));
   const ok=()=>{ sfx.ok(); $('#lnExp').classList.add('on'); if(!x.done){ x.done=true; lnPoint(); } };
-  const no=bt=>{ bt.classList.add('no'); bt.disabled=true; sfx.no(); if(!x.done){ x.done=true; LN.turn=1-LN.turn; lnTeam(); } };
+  const no=bt=>{ bt.classList.add('no'); bt.disabled=true; sfx.no(); x.done=true; };
   document.querySelectorAll('[data-tf]').forEach(bt=>bt.onclick=()=>{ if((bt.dataset.tf==='1')===!!q[3]){ bt.classList.add('ok'); ok(); document.querySelectorAll('[data-tf]').forEach(z=>z.disabled=true); } else no(bt); });
   document.querySelectorAll('[data-o]').forEach(bt=>bt.onclick=()=>{ const o=x.opts[+bt.dataset.o]; if(o.ok){ bt.classList.add('ok'); ok(); say(o.o); document.querySelectorAll('[data-o]').forEach(z=>z.disabled=true); } else no(bt); });
   document.querySelectorAll('[data-or]').forEach(bt=>bt.onclick=()=>{ const j=+bt.dataset.or; x.pick=x.pick||[]; if(x.pick.includes(j)) return; x.pick.push(j);
-    if(x.pick.length===x.ord.length){ const good=x.pick.every((pj,n)=>x.ord[pj].j===n); if(good){ lnWB(); ok(); } else { sfx.no(); x.pick=[]; if(!x.done){ x.done=true; LN.turn=1-LN.turn; lnTeam(); } lnWB(); } } else lnWB(); });
+    if(x.pick.length===x.ord.length){ const good=x.pick.every((pj,n)=>x.ord[pj].j===n); if(good){ lnWB(); ok(); } else { sfx.no(); x.pick=[]; x.done=true; lnWB(); } } else lnWB(); });
   $('#lnRev').onclick=()=>{ $('#lnExp').classList.add('on');
     if(t==='t') document.querySelectorAll('[data-tf]').forEach(z=>{ if((z.dataset.tf==='1')===!!q[3]) z.classList.add('ok'); });
     if(t==='f'||t==='m') document.querySelectorAll('[data-o]').forEach(z=>{ if(x.opts[+z.dataset.o].ok) z.classList.add('ok'); });
@@ -1711,7 +1706,6 @@ function lnSelf(){
       <button class="ln-btn" id="lnTr">↺ 10분으로</button>
       <button class="ln-btn" id="lnTp">+1분</button></div></div>
     <div class="ln-side"><ol class="ln-list"><li>이름을 먼저 써요</li><li>같이 한 쪽을 다시 확인해요</li><li>남은 쪽을 끝까지 풀어요</li><li>다 하면 선생님께 보여 줘요</li></ol>
-     <div class="ln-card">오늘 점수 · 해님 팀 ${LN.score[0]} : ${LN.score[1]} 달님 팀</div>
      <div><button class="ln-btn" id="lnEnd">수업 마치기</button></div></div></div>`;
   const tick=()=>{ S.left--; const el=$('#lnT'); if(el){ el.textContent=lnFmt(S.left); el.classList.toggle('end',S.left<=0); } lnClock();
     if(S.left<=0){ clearInterval(S.iv); S.run=false; sfx.win(); confetti(); if($('#lnTs')) $('#lnTs').textContent='▶ 시작'; } };
