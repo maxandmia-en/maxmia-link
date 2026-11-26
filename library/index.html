@@ -393,6 +393,25 @@ body.teacher .addkid{display:flex}
 .rasum .bar i em{position:absolute;inset:0 auto 0 0;background:#3FA34D;border-radius:6px}
 .rasum .bar small{color:#8A7F6C;white-space:nowrap}
 .ramic{display:flex;flex-direction:column;align-items:center;gap:4px}
+.qmain.ra{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;gap:14px;padding-top:10px}
+.qmain.ra .raart .pgf{width:min(47%,calc((100vh - 235px)*540/767))}
+.qmain.ra .raart .pgf:only-child{width:min(70%,calc((100vh - 235px)*540/767))}
+.raart.flip{animation:raflip .45s ease}
+@keyframes raflip{from{opacity:.25;transform:translateX(24px)}to{opacity:1;transform:none}}
+.rabar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;background:#fff;border-radius:22px;padding:10px 16px;box-shadow:0 6px 0 #E3D5B8;max-width:1100px;width:100%;margin:0 auto}
+.rabar .mic{width:78px;height:78px;margin:0;box-shadow:0 6px 0 #B23236}
+.rabar .mic svg{width:34px}
+.rabar .st{display:flex;flex-direction:column;gap:6px;min-width:200px;flex:1}
+.rabar .st b{font-size:17px;color:var(--ink)}
+.rabar .st small{font-size:14px;color:#8A7F6C}
+.rabar .pbar2{height:12px;border-radius:999px;background:#F1ECE2;overflow:hidden}
+.rabar .pbar2 em{display:block;height:100%;background:#3FA34D;border-radius:999px;transition:width .3s}
+.rabar .rb{border:none;border-radius:14px;padding:12px 16px;background:#F1ECE2;font-weight:800;font-size:16px;cursor:pointer;color:var(--ink)}
+.rabar .rb.lis{background:#FFF3C4}
+.rabar .rb.done{background:var(--navy);color:#fff}
+.rabar .rb:disabled{opacity:.35;cursor:default}
+.rabar img{width:48px;height:48px}
+@media (max-width:760px){ .qmain.ra .raart .pgf{width:48%} .qmain.ra .raart .pgf:only-child{width:62%} .rabar{gap:8px;padding:8px 10px} .rabar .mic{width:64px;height:64px} .rabar .st{min-width:140px} .rabar img{display:none} }
 @media (max-width:760px){ .qmain.ra{grid-template-columns:1fr} .raart .pgf{width:50%} .raart .pgf:only-child{width:62%} }
 
 .fc{border:none;background:none;padding:0;aspect-ratio:1/1.05;perspective:900px;cursor:pointer}
@@ -593,7 +612,7 @@ body.sm .kidchip, body.sm #repBtn, body.sm #tmode, body.sm .tbanner{display:none
   <div class="book" id="book"></div>
   <button class="nav n" id="rNext" aria-label="다음 쪽">›</button>
   <button class="backq" id="backq">↩ 퀴즈로 돌아가기</button>
-  <div class="endcard" id="endcard"><b>다 읽었어요! ⭐</b><button class="eq" id="eQuiz">📚 단어 공부 → 퀴즈</button><button class="again" id="eAgain">처음부터 다시</button></div>
+  <div class="endcard" id="endcard"><b>다 읽었어요! ⭐</b><button class="eq" id="eRA">🎤 이제 소리 내어 읽기</button><button class="eq" id="eQuiz">📚 단어 공부 → 퀴즈</button><button class="again" id="eAgain">처음부터 다시</button></div>
  </div>
  <div class="rfoot"><span class="pnum" id="pnum"></span><div class="prog"><i id="pbar"></i></div></div>
 </div>
@@ -815,7 +834,10 @@ function updUI(){
   $('#endcard').classList.toggle('on', end && !R.back);
   if(end) READ_NOW.add(b.c);
   if(end && !R.logged && !teacher){ R.logged=true; logEvent({type:'read',book:b.c}); if(!ST().read[b.c]){ ST().read[b.c]=true; saveST(); render(); } }
+  const canRA=!!(b.au&&b.pages);
+  $('#eRA').style.display = canRA? '':'none';
   $('#eQuiz').style.display = b.qz? '':'none';
+  $('#eQuiz').className = canRA? 'again' : 'eq';
   cancelEnd();  /* 자동 이동 없음: '퀴즈 풀기' 버튼을 누르면 바로 퀴즈로 */
   $('#backq').classList.toggle('on', R.back);
   ST().pos[b.c] = end?0:curView(); saveST();
@@ -902,6 +924,7 @@ $('#rSnd').onclick=()=>{ R.snd=!R.snd; save('mm_snd',R.snd); if(!R.snd) stopAudi
 $('#rAuto').onclick=()=>{ R.auto=!R.auto; if(R.auto){ R.snd=true; playView(curView(), true); } else clearTimeout(R.autoT); updUI(); };
 $('#rFav').onclick=()=>{ toggleFav(R.b.c); updUI(); };
 $('#eAgain').onclick=()=>{ cancelEnd(); R.v=0; R.p=1; R.lastV=-1; drawBook(); afterMove(); };
+$('#eRA').onclick=()=>{ cancelEnd(); const c=R.b.c; closeReader(); startRA(c); };
 $('#eQuiz').onclick=()=>{ cancelEnd(); const c=R.b.c; closeReader(); startLearn(c); };
 $('#backq').onclick=()=>{ stopAudio(); $('#reader').classList.remove('on'); };
 let tx=null;
@@ -1083,12 +1106,19 @@ const RA={};
 const normW=s=>String(s).toLowerCase().replace(/[’']/g,"'").replace(/[^a-z0-9' ]+/g,' ').split(/\s+/).filter(Boolean);
 const NUM={one:'1',two:'2',three:'3',four:'4',five:'5',six:'6',seven:'7',eight:'8',nine:'9',ten:'10'};
 const nw=w=>{ w=(normW(w)[0]||''); return NUM[w]||w; };
+/* 낭독 채점용 '같은 단어' 판단: 음성 인식이 흔히 바꿔 적는 말(동음어·축약·복수 s·한 글자 차이)은 맞게 읽은 것으로 본다 */
+const HOMO=[['to','too','two','2'],['for','four','4'],['one','won','1'],['there','their',"they're"],['see','sea'],['hi','high'],['no','know'],['by','buy','bye'],['right','write'],['hear','here'],['ate','eight','8'],['mom','mum','mam'],['mia','maya','mya','meer','mea'],['max','macs','mack','marks'],['ok','okay'],['dad','dead'],['red','read'],['blue','blew'],['new','knew'],['son','sun'],['wait','weight'],['be','bee'],['tail','tale'],['flour','flower'],['its',"it's"],['were','where'],['i','eye'],['oh','o'],['yeah','yes']];
+const HOMOM={}; HOMO.forEach((g,i)=>g.forEach(w=>HOMOM[w]=i));
+const stem=w=>w.replace(/'s$/,'').replace(/'/g,'').replace(/(es|s)$/,'');
+function lev1(a,b){ if(Math.abs(a.length-b.length)>1) return false; let i=0,j=0,e=0; while(i<a.length&&j<b.length){ if(a[i]===b[j]){i++;j++;continue;} if(++e>1) return false; if(a.length>b.length) i++; else if(b.length>a.length) j++; else {i++;j++;} } return e+(a.length-i)+(b.length-j)<=1; }
+function weq(a,b){ if(a===b) return true; if(HOMOM[a]!=null && HOMOM[a]===HOMOM[b]) return true;
+  const x=stem(a), y=stem(b); if(x && x===y) return true; if(x.length>=4 && y.length>=4 && lev1(x,y)) return true; return false; }
 function startRA(c){
   const b=byC(c); if(!b||!b.pages) return;
   Z.b=b; Z.eng=isEng(b); RA.b=b;
   RA.list=viewsOf(b.n).map((pg,k)=>({k,pg,txt:k===0? b.t : pg.map(p=>b.pages[p]||'').filter(Boolean).join(' ')})).filter(v=>v.txt);
   RA.words=[]; RA.list.forEach((v,vi)=>{ (v.txt.match(/[A-Za-z0-9’']+/g)||[]).forEach(w=>RA.words.push({w:nw(w),vi})); });
-  RA.T=''; RA.P=''; RA.v=0; RA.live=false; RA.hit=new Array(RA.words.length).fill(false); RA.started=false;
+  RA.T=''; RA.P=''; RA.v=0; RA.live=false; RA.finishing=false; RA.userStop=false; RA.hit=new Array(RA.words.length).fill(false); RA.started=false;
   if(!RA.audio){ RA.audio=new Audio(); RA.audio.addEventListener('timeupdate',()=>{ if(RA.stop!=null && RA.audio.currentTime>=RA.stop){ RA.audio.pause(); RA.stop=null; } }); }
   RA.audio.src=`bk/${c}/a.mp3`;
   $('#qzTitle').textContent=b.t+' · 낭독하기';
@@ -1098,17 +1128,17 @@ function startRA(c){
 }
 function raStopAudio(){ try{ RA.audio && RA.audio.pause(); }catch(e){} RA.stop=null; }
 function raListen(){ const v=RA.list[RA.v], seg=RA.b.au&&RA.b.au[v.k]; if(!seg) return; try{ RA.audio.currentTime=seg[0]; }catch(e){} RA.stop=seg[1]; const p=RA.audio.play(); if(p&&p.catch) p.catch(()=>{}); }
-function raAlign(){
+function raAlign(full){
   /* 지금 쪽과 다음 쪽까지만 맞춰 본다 (같은 단어가 뒤쪽에 또 나와도 책장이 멀리 건너뛰지 않게) */
-  const lim=Math.min(RA.list.length-1, RA.v+1);
+  const lim=full? RA.list.length-1 : Math.min(RA.list.length-1, RA.v+1);
   let n=0; while(n<RA.words.length && RA.words[n].vi<=lim) n++;
   const a=RA.words.slice(0,n).map(x=>x.w), s=normW(RA.T+' '+RA.P).map(w=>NUM[w]||w), m=s.length;
   const D=Array.from({length:n+1},()=>new Uint16Array(m+1));
-  for(let i=n-1;i>=0;i--) for(let j=m-1;j>=0;j--) D[i][j]= a[i]===s[j]? D[i+1][j+1]+1 : Math.max(D[i+1][j],D[i][j+1]);
-  const hit=new Array(RA.words.length).fill(false); let i=0,j=0; while(i<n&&j<m){ if(a[i]===s[j]){ hit[i]=true; i++; j++; } else if(D[i+1][j]>=D[i][j+1]) i++; else j++; }
+  for(let i=n-1;i>=0;i--) for(let j=m-1;j>=0;j--) D[i][j]= weq(a[i],s[j])? D[i+1][j+1]+1 : Math.max(D[i+1][j],D[i][j+1]);
+  const hit=new Array(RA.words.length).fill(false); let i=0,j=0; while(i<n&&j<m){ if(weq(a[i],s[j]) && D[i][j]===D[i+1][j+1]+1){ hit[i]=true; i++; j++; } else if(D[i+1][j]>=D[i][j+1]) i++; else j++; }
   RA.hit=hit; RA.extra=Math.max(0,m-D[0][0]);
   /* 책장은 한 번에 한 쪽씩만 넘긴다 */
-  if(RA.v+1>=RA.list.length) return false;
+  if(full || RA.v+1>=RA.list.length) return false;
   const idx=vi=>RA.words.map((x,k)=>[x,k]).filter(([x])=>x.vi===vi).map(([,k])=>k);
   const cur=idx(RA.v), nxt=idx(RA.v+1), gc=cur.filter(k=>hit[k]).length, gn=nxt.filter(k=>hit[k]).length;
   const endRead = cur.length && (hit[cur[cur.length-1]] || hit[cur[cur.length-2]]) && gc>=cur.length*0.6;
@@ -1119,49 +1149,54 @@ function raAlign(){
 function raMarked(vi){ const v=RA.list[vi]; let k=RA.words.findIndex(x=>x.vi===vi); const live=RA.started;
   return esc(v.txt).replace(/[A-Za-z0-9’']+/g, w=>{ const h=RA.hit[k++]; return `<span class="w ${h?'hit':(RA.done?'miss':'')}">${w}</span>`; }); }
 function raPageScore(vi){ const ks=RA.words.map((x,k)=>[x,k]).filter(([x])=>x.vi===vi); return ks.length? Math.round(100*ks.filter(([,k])=>RA.hit[k]).length/ks.length) : 0; }
-function drawRA(){
+function drawRA(flip){
   const b=RA.b, v=RA.list[RA.v];
   $('#qzTrail').style.display='flex';
-  $('#qzTrail').innerHTML=`<div class="lsteps"><span class="on">🎤 ${L('낭독하기','Read aloud')} · ${L('쪽','Page')} ${RA.v+1} / ${RA.list.length}</span></div>`;
+  $('#qzTrail').innerHTML=`<div class="lsteps"><span class="on">🎤 ${L('낭독하기','Read aloud')} · ${L('책을 보고 소리 내어 읽어요','Read the book out loud')}</span></div>`;
   const m=$('#qzMain'); m.classList.remove('solo','game'); m.classList.add('ra');
-  const micBtn = DICT? `<div class="ramic"><button class="mic ${RA.live&&micOn?'live':''}" id="ramic" aria-label="Read">${MIC}</button><p class="frame-hint" id="micst">${RA.live? (micOn? L('듣고 있어요… 끝까지 쭉 읽어요','Listening… keep reading') : L('눌러서 이어 읽기','Tap to keep reading')) : L('눌러서 처음부터 읽기','Tap and start reading')}</p></div>` : '';
-  m.innerHTML=`<div class="raart">${v.pg.map(p=>`<div class="pgf" style="${pageBg(b.c,p)}"></div>`).join('')}</div>
-   <div class="lcard">
-    <div class="guide2"><img src="maxface.png" alt=""><div class="bub" id="bub">${DICT? (RA.live? L('잘하고 있어요! 다 읽으면 "다 읽었어요"를 눌러요.','Great! Tap “I’m done” at the end.') : L('마이크를 한 번 누르고 책 끝까지 쭉 읽어요. 책장은 저절로 넘어가요.','Tap the mic once and read the whole book. Pages turn by themselves.')) : L('이 기기에서는 마이크 인식이 안 돼요. 크롬 브라우저에서 열어 주세요.','The mic does not work here. Please use Chrome or the Claude app.')}</div></div>
-    <div class="ratext" id="ratext">${raMarked(RA.v)}</div>
-    <div class="rarow">${micBtn}<button class="lis" id="ralis">🔊 ${L('이 쪽 원어민 듣기','Listen to this page')}</button></div>
-    <p class="raheard" id="raheard" style="border-style:dashed">${esc((RA.T+' '+RA.P).trim().split(' ').slice(-14).join(' ')) || L('내가 읽은 말이 여기에 나와요','What you read shows here')}</p>
-    <div class="lnav"><button class="pv" id="rapv" ${RA.v?'':'disabled'}>‹</button><button class="pv" id="ranx" ${RA.v+1<RA.list.length?'':'disabled'}>›</button>
-      <button class="nx" id="radone" ${RA.started||teacher?'':'disabled'}>${L('다 읽었어요 ✓','I’m done ✓')}</button></div>
+  const st = !DICT? L('이 기기에서는 마이크를 쓸 수 없어요. 원어민 소리를 듣고 따라 읽어요.','The mic is not available here. Listen and read along.')
+    : RA.live? (micOn? L('듣고 있어요… 책장은 저절로 넘어가요','Listening… pages turn by themselves') : L('마이크를 눌러 이어 읽어요','Tap the mic to keep reading'))
+    : L('마이크를 한 번 누르고 책을 끝까지 쭉 읽어요','Tap the mic once and read the whole book');
+  m.innerHTML=`<div class="raart${flip?' flip':''}">${v.pg.map(p=>`<div class="pgf" style="${pageBg(b.c,p)}"></div>`).join('')}</div>
+   <div class="rabar">
+    <img src="maxface.png" alt="">
+    <button class="rb" id="rapv" aria-label="${L('앞 쪽','Back')}" ${RA.v?'':'disabled'}>‹</button>
+    ${DICT?`<button class="mic ${RA.live&&micOn?'live':''}" id="ramic" aria-label="${L('마이크','Mic')}">${MIC}</button>`:''}
+    <div class="st"><b id="micst">${st}</b><div class="pbar2"><em id="rapg" style="width:${RA.started?raPageScore(RA.v):0}%"></em></div><small>${L('쪽','Page')} ${RA.v+1} / ${RA.list.length} · ${L('초록 막대 = 이 쪽에서 맞게 읽은 만큼','Green = words read right on this page')}</small></div>
+    <button class="rb lis" id="ralis">🔊 ${L('이 쪽 듣기','Listen')}</button>
+    <button class="rb" id="ranx" aria-label="${L('다음 쪽','Next')}" ${RA.v+1<RA.list.length?'':'disabled'}>›</button>
+    <button class="rb done" id="radone" ${RA.started||teacher?'':'disabled'}>${L('다 읽었어요 ✓','I’m done ✓')}</button>
    </div>`;
   if(DICT){ ensureDict(); $('#ramic').onclick=raMic; }
   $('#ralis').onclick=raListen;
-  $('#rapv').onclick=()=>{ if(RA.v){ RA.v--; drawRA(); } };
-  $('#ranx').onclick=()=>{ if(RA.v+1<RA.list.length){ RA.v++; drawRA(); } };
+  $('#rapv').onclick=()=>{ if(RA.v){ RA.v--; drawRA(true); } };
+  $('#ranx').onclick=()=>{ if(RA.v+1<RA.list.length){ RA.v++; drawRA(true); } };
   $('#radone').onclick=raFinish;
 }
 function raMic(){
-  if(RA.live && micOn){ DICT.stop().catch(()=>{}); return; }
+  if(RA.live && micOn){ RA.userStop=true; DICT.stop().catch(()=>{}); return; }
+  RA.userStop=false;
   raStopAudio(); RA.live=true; RA.started=true;
   DICT.start().then(()=>drawRA()).catch(e=>{ RA.live=false; if(e&&e.code==='not_granted'){ DICT=null; } drawRA(); });
   drawRA();
 }
-function raUpdate(){ const turned=raAlign(); if(turned) return drawRA();
-  const t=$('#ratext'); if(t) t.innerHTML=raMarked(RA.v);
-  const h=$('#raheard'); if(h) h.textContent=(RA.T+' '+RA.P).trim().split(' ').slice(-14).join(' ');
+function raUpdate(){ const turned=raAlign(); if(turned) return drawRA(true);
+  const g=$('#rapg'); if(g) g.style.width=raPageScore(RA.v)+'%';
   const d=$('#radone'); if(d) d.disabled=false; }
 function raFinal(text){ text=(text||'').trim(); RA.P=''; if(text && !RA.T.toLowerCase().endsWith(text.toLowerCase())) RA.T=(RA.T+' '+text).trim(); raUpdate(); }
 function raPartial(text){ RA.P=(text||'').trim(); raUpdate(); }
-function raState(){ const m=$('#ramic'); if(m) m.classList.toggle('live',micOn); const st=$('#micst'); if(st) st.textContent= micOn? L('듣고 있어요… 끝까지 쭉 읽어요','Listening… keep reading') : L('눌러서 이어 읽기','Tap to keep reading'); }
+function raState(){ if(!micOn && RA.live && !RA.finishing && !RA.userStop && DICT && $('#quiz').classList.contains('on')){ clearTimeout(RA.rt); RA.rt=setTimeout(()=>{ if(RA.live && !micOn && !RA.finishing && !RA.userStop) DICT.start().catch(()=>{}); },400); }
+  const m=$('#ramic'); if(m) m.classList.toggle('live',micOn); const st=$('#micst'); if(st) st.textContent= micOn? L('듣고 있어요… 책장은 저절로 넘어가요','Listening… pages turn by themselves') : L('마이크를 눌러 이어 읽어요','Tap the mic to keep reading'); }
 async function raFinish(){
+  RA.finishing=true;
   if(micOn && DICT){ try{ await DICT.stop(); }catch(e){} await new Promise(r=>setTimeout(r,700)); }
-  RA.live=false; RA.P=''; raAlign(); RA.done=true; raDone();
+  RA.live=false; RA.P=''; raAlign(true); RA.done=true; raDone();
 }
 function raMsg(s){ return s>=90? L('원어민처럼 읽었어요! 🌟','Like a native speaker! 🌟') : s>=70? L('아주 잘 읽었어요!','Great reading!') : s>=40? L('빨간 단어를 다시 연습해 봐요.','Practice the red words.') : L('원어민 소리를 듣고 한 번 더!','Listen and try again!'); }
 function raDone(){
   raStopAudio();
   const b=RA.b, n=RA.words.length, got=RA.hit.filter(Boolean).length;
-  const score=n? Math.max(0,Math.round(100*got/n - Math.min(10,(RA.extra||0)))) : 0;
+  const score=n? Math.round(100*got/n) : 0;
   const miss=[...new Set(RA.words.map((x,k)=>RA.hit[k]?null:x.w).filter(Boolean))];
   if(RA.started && !teacher){ const s=ST(); s.ra=s.ra||{}; s.ra[b.c]=Math.max(s.ra[b.c]||0,score); saveST();
     logEvent({type:'ra',book:b.c,score,pages:RA.list.filter((_,vi)=>raPageScore(vi)>0).length,of:RA.list.length,miss:miss.slice(0,12)}); if(score>=70) confetti(); }
@@ -1172,8 +1207,8 @@ function raDone(){
     <p style="text-align:center;color:#8A7F6C">${L(`책 전체 ${n}단어 중 ${got}단어를 원어민 문장과 같게 읽었어요`,`You read ${got} of ${n} words`)}</p>
     ${miss.length?`<p style="text-align:center"><b>${L('다시 연습할 단어','Practice these')}:</b> ${miss.slice(0,15).map(w=>`<span class="w miss" style="display:inline-block;margin:2px;padding:2px 8px;border-radius:8px;background:#FDDCDC;color:#B3261E">${esc(w)}</span>`).join('')}</p>`:''}
     ${RA.list.map((v,vi)=>{ const s=raPageScore(vi); return `<div class="bar"><span style="min-width:0;flex:2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(v.txt)}</span><i><em style="width:${s}%"></em></i><small>${s}${L('점','')}</small></div>`; }).join('')}
-    <div class="lnav" style="margin-top:16px"><button class="pv" id="raag">${L('처음부터 다시','Again')}</button><button class="nx" id="racl">${L('닫기','Close')}</button></div></div>`;
-  $('#raag').onclick=()=>startRA(b.c); $('#racl').onclick=closeQuiz;
+    <div class="lnav" style="margin-top:16px"><button class="pv" id="raag">${L('처음부터 다시','Again')}</button>${b.qz?`<button class="nx" id="raqz">📚 ${L('다음: 단어 공부 → 퀴즈','Next: Words → Quiz')}</button>`:`<button class="nx" id="racl">${L('닫기','Close')}</button>`}</div></div>`;
+  $('#raag').onclick=()=>startRA(b.c); if($('#racl')) $('#racl').onclick=closeQuiz; if($('#raqz')) $('#raqz').onclick=()=>startLearn(b.c);
 }
 
 function closeQuiz(){ raStopAudio(); if(RA.live){ RA.live=false; try{ DICT&&DICT.stop(); }catch(e){} } $('#qzMain').classList.remove('ra','game','solo'); try{speechSynthesis.cancel(); TTS&&TTS.stop();}catch(e){} $('#quiz').classList.remove('on'); document.body.style.overflow=''; render(); }
